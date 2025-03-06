@@ -122,6 +122,120 @@ function Invoke-AtomicTest {
         [Parameter(Mandatory = $false,
             ParameterSetName = 'technique')]
         [switch]
+        $SupressPathToAtomicsFolder = $false,
+
+        # Parameter set if user only enters GUIDs
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $ShowDetails,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $ShowDetailsBrief,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $anyOS,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [String[]]
+        $TestNumbers,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [String[]]
+        $TestNames,
+
+        [Parameter(Mandatory = $true,
+            ParameterSetName = 'guid')]
+        [String[]]
+        $TestGuids,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [String]
+        $PathToAtomicsFolder = $( if ($IsLinux -or $IsMacOS) { $Env:HOME + "/AtomicRedTeam/atomics" } else { $env:HOMEDRIVE + "\AtomicRedTeam\atomics" }),
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $CheckPrereqs = $false,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $PromptForInputArgs = $false,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $GetPrereqs = $false,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $Cleanup = $false,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [switch]
+        $NoExecutionLog = $false,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [String]
+        $ExecutionLogPath = $( if ($IsLinux -or $IsMacOS) { "/tmp/Invoke-AtomicTest-ExecutionLog.csv" } else { "$env:TEMP\Invoke-AtomicTest-ExecutionLog.csv" }),
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [switch]
+        $Force,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [HashTable]
+        $InputArgs,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [Int]
+        $TimeoutSeconds = 120,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'guid')]
+        [System.Management.Automation.Runspaces.PSSession[]]$Session,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $Interactive = $false,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            ParameterSetName = 'guid')]
+        [switch]
+        $KeepStdOutStdErrFiles = $false,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [String]
+        $LoggingModule,
+
+        [Parameter(Mandatory = $false,
+            ParameterSetName = 'guid')]
+        [switch]
         $SupressPathToAtomicsFolder = $false
 
     )
@@ -143,6 +257,15 @@ function Invoke-AtomicTest {
 
         $executionPlatform, $isElevated, $tmpDir, $executionHostname, $executionUser = Get-TargetInfo $Session
         $PathToPayloads = if ($Session) { "$tmpDir`AtomicRedTeam" }  else { $PathToAtomicsFolder }
+
+        if (Get-Variable -Name "AtomicTechnique" -ErrorAction SilentlyContinue) {
+            foreach ($guid in $TestGuids) {
+                $Match = Select-String -Path $PathToAtomicsFolder/*.yaml -Pattern $guid -Recurse | Select-Object -First 1
+                $AtomicTechnique = Split-Path -Path $match.Path -Leaf
+                Write-Verbose -Message $MyInvocation.MyCommand.Name
+                return
+            }
+        }
 
         # Since there might a comma(T1559-1,2,3) Powershell takes it as array.
         # So converting it back to string.
